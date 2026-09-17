@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HealthyWay — AI food & body analysis</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="wrap header-row">
+      <div class="logo">Healthy<span>Way</span></div>
+    </div>
+  </header>
+
+  <main>
+
+    <!-- ============ HOME TAB ============ -->
+    <section class="tab-panel wrap" id="tab-home" data-tab-panel="home">
+      <div class="hero">
+        <h1>Point a camera at your plate.<br>Get a number back.</h1>
+        <p class="hero-sub">
+          HealthyWay reads a photo of your meal or your physique and returns an estimate —
+          calories, protein, fat, carbs, or an approximate body-fat range. Not a lab test.
+          A fast, useful guess.
+        </p>
+      </div>
+
+      <div class="home-cards">
+        <button class="home-card" data-goto="food">
+          <span class="home-card-icon home-card-icon-green">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M4 8h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          </span>
+          <span class="home-card-title">Scan your food</span>
+          <span class="home-card-sub">Photo of a meal → estimated calories & macros</span>
+        </button>
+
+        <button class="home-card" data-goto="body">
+          <span class="home-card-icon home-card-icon-purple">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+          </span>
+          <span class="home-card-title">Analyze your body</span>
+          <span class="home-card-sub">Photo of yourself → approximate body-fat range</span>
+        </button>
+      </div>
+
+      <div class="home-today" id="home-today">
+        <!-- filled by history.js: today's totals -->
+      </div>
+    </section>
+
+    <!-- ============ FOOD TAB ============ -->
+    <section class="tab-panel wrap" id="tab-food" data-tab-panel="food" hidden>
+      <div class="feature-head">
+        <h2>Food scan</h2>
+        <p>Upload a photo of a meal. HealthyWay estimates what's on the plate.</p>
+      </div>
+
+      <div class="panel">
+        <div class="upload-col">
+          <label class="dropzone" id="food-dropzone" for="food-input">
+            <input type="file" id="food-input" accept="image/*" hidden />
+            <div class="dropzone-empty" id="food-empty">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M4 8h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <p>Drop a photo here, or tap to choose one</p>
+              <span class="hint">JPG or PNG, one plate at a time works best</span>
+            </div>
+            <img id="food-preview" class="preview-img" hidden />
+          </label>
+
+          <button id="food-analyze-btn" class="btn btn-primary" disabled>Analyze this meal</button>
+          <button id="food-reset-btn" class="btn btn-ghost" hidden>Choose a different photo</button>
+        </div>
+
+        <div class="result-col">
+          <div id="food-idle" class="result-idle">
+            <p>Your estimate will show up here once you analyze a photo.</p>
+          </div>
+
+          <div id="food-loading" class="result-loading" hidden>
+            <div class="spinner"></div>
+            <p>Reading the plate…</p>
+          </div>
+
+          <div id="food-error" class="result-error" hidden>
+            <p id="food-error-text">Something went wrong.</p>
+            <button class="btn btn-ghost" id="food-retry-btn">Try again</button>
+          </div>
+
+          <div id="food-result" class="result-card" hidden>
+            <div class="result-title-row">
+              <h3 id="food-name">—</h3>
+              <span class="badge">approximate</span>
+            </div>
+            <p class="result-portion" id="food-portion"></p>
+
+            <div class="macro-grid">
+              <div class="macro-cell macro-cal">
+                <span class="macro-value" id="food-cal">0</span>
+                <span class="macro-label">kcal</span>
+              </div>
+              <div class="macro-cell">
+                <span class="macro-value" id="food-protein">0g</span>
+                <span class="macro-label">protein</span>
+              </div>
+              <div class="macro-cell">
+                <span class="macro-value" id="food-fat">0g</span>
+                <span class="macro-label">fat</span>
+              </div>
+              <div class="macro-cell">
+                <span class="macro-value" id="food-carbs">0g</span>
+                <span class="macro-label">carbs</span>
+              </div>
+            </div>
+
+            <p class="confidence-note" id="food-confidence"></p>
+            <p class="disclaimer">
+              Estimated from a single photo — actual values can be off by a wide margin
+              depending on portion size, hidden oils, and ingredients the camera can't see.
+              Don't use this for medical or clinical decisions.
+            </p>
+            <p class="saved-note" id="food-saved-note" hidden>Saved to your Profile ✓</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ BODY TAB ============ -->
+    <section class="tab-panel wrap" id="tab-body" data-tab-panel="body" hidden>
+      <div class="feature-head">
+        <h2>Body estimate</h2>
+        <p>Upload a clear, well-lit full-body photo. HealthyWay returns a rough body-fat range.</p>
+      </div>
+
+      <div class="panel">
+        <div class="upload-col">
+          <label class="dropzone" id="body-dropzone" for="body-input">
+            <input type="file" id="body-input" accept="image/*" hidden />
+            <div class="dropzone-empty" id="body-empty">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M4 8h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <p>Drop a full-body photo here, or tap to choose one</p>
+              <span class="hint">Plain background, fitted clothing, good lighting</span>
+            </div>
+            <img id="body-preview" class="preview-img" hidden />
+          </label>
+
+          <button id="body-analyze-btn" class="btn btn-primary" disabled>Estimate body fat</button>
+          <button id="body-reset-btn" class="btn btn-ghost" hidden>Choose a different photo</button>
+        </div>
+
+        <div class="result-col">
+          <div id="body-idle" class="result-idle">
+            <p>Your estimate will show up here once you analyze a photo.</p>
+          </div>
+
+          <div id="body-loading" class="result-loading" hidden>
+            <div class="spinner"></div>
+            <p>Looking this over…</p>
+          </div>
+
+          <div id="body-error" class="result-error" hidden>
+            <p id="body-error-text">Something went wrong.</p>
+            <button class="btn btn-ghost" id="body-retry-btn">Try again</button>
+          </div>
+
+          <div id="body-result" class="result-card" hidden>
+            <div class="result-title-row">
+              <h3>Estimated body fat</h3>
+              <span class="badge">approximate</span>
+            </div>
+
+            <div class="range-display">
+              <span id="body-range-low">--</span>
+              <span class="range-sep">–</span>
+              <span id="body-range-high">--</span>
+              <span class="range-unit">%</span>
+            </div>
+            <p class="result-portion" id="body-category"></p>
+
+            <div class="range-display range-display-secondary">
+              <span id="body-muscle-low">--</span>
+              <span class="range-sep">–</span>
+              <span id="body-muscle-high">--</span>
+              <span class="range-unit">%</span>
+              <span class="range-tag">muscle mass</span>
+            </div>
+            <p class="result-portion" id="body-muscle-category"></p>
+
+            <p class="confidence-note" id="body-confidence"></p>
+            <p class="disclaimer disclaimer-strong">
+              This is a visual estimate from one photo, not a medical or clinical measurement.
+              Lighting, posture, and camera angle all change the result. For an accurate reading,
+              use a method like DEXA, BodPod, or skinfold calipers from a trained professional.
+            </p>
+            <p class="saved-note" id="body-saved-note" hidden>Saved to your Profile ✓</p>
+
+            <!-- ---- personalized calorie/macro recommendation ---- -->
+            <div class="reco-block">
+              <button class="btn btn-ghost btn-small" id="reco-toggle-btn">Get calorie & macro recommendations</button>
+
+              <form id="reco-form" class="reco-form" hidden>
+                <p class="reco-form-note">
+                  These numbers use your estimated body-fat range plus a standard formula
+                  (Mifflin-St Jeor) — not AI guesswork. They're a starting point, not a
+                  prescription.
+                </p>
+                <div class="reco-form-grid">
+                  <label>Weight (kg)
+                    <input type="number" id="reco-weight" min="20" max="300" step="0.1" required />
+                  </label>
+                  <label>Height (cm)
+                    <input type="number" id="reco-height" min="100" max="230" step="0.1" required />
+                  </label>
+                  <label>Age
+                    <input type="number" id="reco-age" min="1" max="100" step="1" required />
+                  </label>
+                  <label>Sex
+                    <select id="reco-sex">
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                    </select>
+                  </label>
+                  <label class="reco-form-full">Activity level
+                    <select id="reco-activity">
+                      <option value="1.2">Sedentary (little/no exercise)</option>
+                      <option value="1.375">Light exercise (1-3 days/week)</option>
+                      <option value="1.55" selected>Moderate exercise (3-5 days/week)</option>
+                      <option value="1.725">Heavy exercise (6-7 days/week)</option>
+                      <option value="1.9">Very heavy (athlete / physical job)</option>
+                    </select>
+                  </label>
+                </div>
+                <button type="submit" class="btn btn-primary btn-small">Calculate</button>
+              </form>
+
+              <div id="reco-minor-notice" class="reco-notice" hidden>
+                <p>
+                  This calculator doesn't give calorie-deficit or surplus targets for anyone
+                  under 18 — growing bodies have different nutrition needs. Please talk to a
+                  pediatrician, doctor, or a parent/guardian about nutrition instead.
+                </p>
+              </div>
+
+              <div id="reco-result" class="reco-result" hidden>
+                <h4 id="reco-goal-title"></h4>
+                <p class="reco-goal-sub" id="reco-goal-sub"></p>
+                <div class="macro-grid">
+                  <div class="macro-cell macro-cal"><span class="macro-value" id="reco-cal">0</span><span class="macro-label">kcal/day</span></div>
+                  <div class="macro-cell"><span class="macro-value" id="reco-protein">0g</span><span class="macro-label">protein</span></div>
+                  <div class="macro-cell"><span class="macro-value" id="reco-fat">0g</span><span class="macro-label">fat</span></div>
+                  <div class="macro-cell"><span class="macro-value" id="reco-carbs">0g</span><span class="macro-label">carbs</span></div>
+                </div>
+                <p class="disclaimer">
+                  Rough starting point based on standard formulas and your inputs — not
+                  personalized medical or dietetic advice. If you have a health condition,
+                  are pregnant, or have a history of disordered eating, check with a doctor
+                  or registered dietitian before following a calorie target.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CHAT TAB ============ -->
+    <section class="tab-panel wrap" id="tab-chat" data-tab-panel="chat" hidden>
+      <div class="feature-head">
+        <h2>Coach chat</h2>
+        <p>Ask about training or nutrition, or attach a photo — like a menu — and ask what to pick.</p>
+      </div>
+
+      <div class="chat-shell">
+        <div class="chat-templates" id="chat-templates">
+          <button type="button" class="chat-chip" data-template="Here's a photo of a restaurant menu — which item would you recommend for a balanced, high-protein meal?">Pick from this menu</button>
+          <button type="button" class="chat-chip" data-template="How many strength training sessions and how much cardio should I do per week as a beginner?">Strength vs cardio split</button>
+          <button type="button" class="chat-chip" data-template="Can you suggest a simple weekly workout plan for a beginner?">Beginner workout plan</button>
+          <button type="button" class="chat-chip" data-template="What are some easy ways to get more protein into my daily meals?">More protein tips</button>
+          <button type="button" class="chat-chip" data-template="Here's a photo of my plate — any suggestions to make it more balanced?">Feedback on my plate</button>
+        </div>
+
+        <div class="chat-messages" id="chat-messages">
+          <div class="chat-empty" id="chat-empty">
+            <p>Ask a question, or attach a photo — like a menu or your plate — and ask what to pick.</p>
+          </div>
+        </div>
+
+        <form class="chat-input-row" id="chat-form">
+          <div class="chat-attach-preview" id="chat-attach-preview" hidden>
+            <img id="chat-attach-img" alt="" />
+            <button type="button" id="chat-attach-remove" aria-label="Remove photo">✕</button>
+          </div>
+          <div class="chat-input-controls">
+            <label class="chat-attach-btn" for="chat-image-input" aria-label="Attach photo">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21.44 11.05l-9.19 9.19a5 5 0 01-7.07-7.07l9.19-9.19a3.5 3.5 0 014.95 4.95l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+              <input type="file" id="chat-image-input" accept="image/*" hidden />
+            </label>
+            <textarea id="chat-text-input" rows="1" placeholder="Ask something…"></textarea>
+            <button type="submit" class="btn btn-primary chat-send-btn" id="chat-send-btn">Send</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============ PROFILE TAB ============ -->
+    <section class="tab-panel wrap" id="tab-profile" data-tab-panel="profile" hidden>
+      <div class="feature-head">
+        <h2>Profile</h2>
+        <p>Everything you've scanned, saved on this device.</p>
+      </div>
+
+      <div class="profile-summary" id="profile-summary">
+        <!-- filled by history.js: today's totals -->
+      </div>
+
+      <div class="profile-actions">
+        <button class="btn btn-ghost btn-small" id="profile-clear-btn">Clear all history</button>
+      </div>
+
+      <div id="profile-empty" class="profile-empty" hidden>
+        <p>Nothing logged yet. Scan a meal or a body photo and it'll show up here.</p>
+      </div>
+
+      <div id="profile-list" class="profile-list"></div>
+    </section>
+
+  </main>
+
+  <!-- ============ BOTTOM TAB BAR ============ -->
+  <nav class="bottom-nav" id="bottom-nav">
+    <button class="bottom-nav-btn" data-tab="home" aria-label="Home">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11.5L12 4l9 7.5M5 10v9a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-9"/></svg>
+      <span>Home</span>
+    </button>
+    <button class="bottom-nav-btn" data-tab="food" aria-label="Food scan">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M4 8h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      <span>Food</span>
+    </button>
+    <button class="bottom-nav-btn" data-tab="body" aria-label="Body estimate">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
+      <span>Body</span>
+    </button>
+    <button class="bottom-nav-btn" data-tab="chat" aria-label="Coach chat">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+      <span>Coach</span>
+    </button>
+    <button class="bottom-nav-btn" data-tab="profile" aria-label="Profile">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6M12 12a4 4 0 100-8 4 4 0 000 8z"/></svg>
+      <span>Profile</span>
+    </button>
+  </nav>
+
+  <script src="history.js"></script>
+  <script src="chat.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
