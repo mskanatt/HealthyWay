@@ -130,11 +130,24 @@
     <section class="tab-panel wrap" id="tab-body" data-tab-panel="body" hidden>
       <div class="feature-head">
         <h2>Body estimate</h2>
-        <p>Upload a clear, well-lit full-body photo. HealthyWay returns a rough body-fat range.</p>
+        <p>Enter your height and weight, then upload a clear, well-lit full-body photo. HealthyWay returns a rough body-fat range.</p>
       </div>
 
       <div class="panel">
         <div class="upload-col">
+
+          <div class="body-info-form" id="body-info-form">
+            <p class="body-info-note">Enter your height and weight first — it helps the AI give a more accurate estimate.</p>
+            <div class="body-info-grid">
+              <label>Height (cm)
+                <input type="number" id="body-height-input" min="100" max="230" step="0.1" placeholder="e.g. 175" />
+              </label>
+              <label>Weight (kg)
+                <input type="number" id="body-weight-input" min="20" max="300" step="0.1" placeholder="e.g. 70" />
+              </label>
+            </div>
+          </div>
+
           <label class="dropzone" id="body-dropzone" for="body-input">
             <input type="file" id="body-input" accept="image/*" hidden />
             <div class="dropzone-empty" id="body-empty">

@@ -160,12 +160,24 @@ app.post("/api/analyze-food", async (req, res) => {
 });
 
 // ---------- /api/analyze-body ----------
+// Now takes the user's own height/weight along with the photo, so Gemini has
+// real biometric context (rather than guessing scale purely from the image).
 
-const BODY_PROMPT = `
+function buildBodyPrompt(heightCm, weightKg) {
+  return `
 You are a cautious fitness-education assistant. You will be shown one photo of a person's body.
 
+The person has told you their own height and weight:
+- Height: ${heightCm} cm
+- Weight: ${weightKg} kg
+
+Use these numbers together with the photo to sanity-check and refine your visual estimate
+(e.g. cross-reference against BMI and typical body-fat ranges for that height/weight), but
+the photo is still your primary evidence — don't just compute a number from BMI alone, since
+BMI doesn't distinguish muscle from fat.
+
 Give TWO rough, approximate percentage RANGES based on visible muscle definition,
-visible vascularity, and fat distribution:
+visible vascularity, fat distribution, and the height/weight context above:
 1. Body-fat percentage
 2. Muscle-mass percentage (of total body weight)
 
@@ -193,19 +205,23 @@ confidence: "low".
 Never mention specific diseases, health risks, or give medical advice. Never comment on
 attractiveness. Stay purely descriptive and neutral.
 `.trim();
+}
 
 app.post("/api/analyze-body", async (req, res) => {
   try {
-    const { image, mimeType } = req.body || {};
+    const { image, mimeType, heightCm, weightKg } = req.body || {};
     if (!image) return badRequest(res, "No image was provided.");
     if (!mimeType || !mimeType.startsWith("image/")) {
       return badRequest(res, "That file doesn't look like an image.");
+    }
+    if (!heightCm || !weightKg) {
+      return badRequest(res, "Height and weight are required for a body estimate.");
     }
 
     const result = await callGeminiForJson({
       base64Image: image,
       mimeType,
-      promptText: BODY_PROMPT,
+      promptText: buildBodyPrompt(heightCm, weightKg),
     });
 
     res.json(result);
@@ -214,8 +230,6 @@ app.post("/api/analyze-body", async (req, res) => {
     res.status(502).json({ error: err.message || "Body estimate failed." });
   }
 });
-
-// ---------- start server ----------
 
 // ---------- /api/chat ----------
 //

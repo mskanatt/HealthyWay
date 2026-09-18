@@ -33,11 +33,11 @@ function validateImageFile(file) {
   return null; // valid
 }
 
-async function postImageToBackend(endpoint, base64Image, mimeType) {
+async function postImageToBackend(endpoint, base64Image, mimeType, extra = {}) {
   const res = await fetch(BACKEND_URL + endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ image: base64Image, mimeType }),
+    body: JSON.stringify({ image: base64Image, mimeType, ...extra }),
   });
 
   let data;
@@ -57,8 +57,11 @@ async function postImageToBackend(endpoint, base64Image, mimeType) {
 
 // ---------- generic upload-widget wiring ----------
 // Both features share the same UI pattern, so one function wires up each one.
+// `requiredExtraIds` (optional) lists extra input element ids that must be
+// filled in before the analyze button enables — e.g. height/weight for body scans.
+// `getExtraFields` (optional) returns an object merged into the POST body.
 
-function setupUploadWidget({ prefix, endpoint, onResult }) {
+function setupUploadWidget({ prefix, endpoint, onResult, getExtraFields, requiredExtraIds }) {
   const dropzone = document.getElementById(`${prefix}-dropzone`);
   const input = document.getElementById(`${prefix}-input`);
   const emptyState = document.getElementById(`${prefix}-empty`);
@@ -83,6 +86,18 @@ function setupUploadWidget({ prefix, endpoint, onResult }) {
     resultEl.hidden = state !== "result";
   }
 
+  function extraFieldsOk() {
+    if (!requiredExtraIds) return true;
+    return requiredExtraIds.every((id) => {
+      const el = document.getElementById(id);
+      return el && el.value.trim() !== "";
+    });
+  }
+
+  function updateAnalyzeState() {
+    analyzeBtn.disabled = !(currentFile && extraFieldsOk());
+  }
+
   function setFile(file) {
     const problem = validateImageFile(file);
     if (problem) {
@@ -95,9 +110,9 @@ function setupUploadWidget({ prefix, endpoint, onResult }) {
     previewImg.src = url;
     previewImg.hidden = false;
     emptyState.hidden = true;
-    analyzeBtn.disabled = false;
     resetBtn.hidden = false;
     if (savedNoteEl) savedNoteEl.hidden = true;
+    updateAnalyzeState();
     showState("idle");
   }
 
@@ -106,10 +121,19 @@ function setupUploadWidget({ prefix, endpoint, onResult }) {
     previewImg.hidden = true;
     previewImg.src = "";
     emptyState.hidden = false;
-    analyzeBtn.disabled = true;
     resetBtn.hidden = true;
     input.value = "";
+    updateAnalyzeState();
     showState("idle");
+  }
+
+  // if there are required extra fields (height/weight), re-check the button
+  // state whenever the user types into them
+  if (requiredExtraIds) {
+    requiredExtraIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("input", updateAnalyzeState);
+    });
   }
 
   // file picked via click
@@ -139,11 +163,12 @@ function setupUploadWidget({ prefix, endpoint, onResult }) {
   retryBtn.addEventListener("click", () => showState("idle"));
 
   analyzeBtn.addEventListener("click", async () => {
-    if (!currentFile) return;
+    if (!currentFile || !extraFieldsOk()) return;
     showState("loading");
     try {
       const base64 = await bytesToBase64(currentFile);
-      const data = await postImageToBackend(endpoint, base64, currentFile.type);
+      const extra = getExtraFields ? getExtraFields() : {};
+      const data = await postImageToBackend(endpoint, base64, currentFile.type, extra);
       onResult(data, currentFile);
       showState("result");
     } catch (err) {
@@ -151,6 +176,8 @@ function setupUploadWidget({ prefix, endpoint, onResult }) {
       errorTextEl.textContent = err.message || "Something went wrong. Please try again.";
     }
   });
+
+  updateAnalyzeState();
 }
 
 // ---------- food result rendering ----------
@@ -186,6 +213,13 @@ setupUploadWidget({
 setupUploadWidget({
   prefix: "body",
   endpoint: "/api/analyze-body",
+  requiredExtraIds: ["body-height-input", "body-weight-input"],
+  getExtraFields() {
+    return {
+      heightCm: parseFloat(document.getElementById("body-height-input").value) || null,
+      weightKg: parseFloat(document.getElementById("body-weight-input").value) || null,
+    };
+  },
   onResult(data, file) {
     // expected shape from backend:
     // { rangeLow, rangeHigh, category, muscleLow, muscleHigh, muscleCategory, confidence }
@@ -202,6 +236,12 @@ setupUploadWidget({
     // Reset the recommendation panel for this fresh result.
     resetRecommendationPanel();
     currentBodyFatRange = { low: Number(data.rangeLow) || 0, high: Number(data.rangeHigh) || 0 };
+
+    // Prefill the calorie-recommendation form with the height/weight they already entered.
+    const h = document.getElementById("body-height-input").value;
+    const w = document.getElementById("body-weight-input").value;
+    if (h) document.getElementById("reco-height").value = h;
+    if (w) document.getElementById("reco-weight").value = w;
 
     // Save this scan to the Profile tab's history (see history.js).
     if (window.HealthyWayHistory) {
