@@ -1,22 +1,21 @@
-// HealthyWay — tabs + history
-//
-// This file does two independent jobs:
-//   1. Switches between the four bottom-nav tabs (Home / Food / Body / Profile).
-//   2. Keeps a history of past scans in the browser's localStorage, and renders
-//      it on the Home tab ("today's totals") and the Profile tab (full list).
-//
-// IMPORTANT LIMITATION: localStorage is per-browser, per-device. There is no
-// login system in this MVP, so "your history" really means "this browser's
-// history" — clearing browser data, using a different browser, or switching
-// devices all lose it. See README.md section 15 for how to move this to a
-// real backend + database later if you need it to follow the user around.
-
 (function () {
   "use strict";
 
   const HISTORY_KEY = "healthyway_history_v1";
   const MAX_ENTRIES = 200; // keep localStorage from growing without bound
   const THUMB_MAX_DIM = 160; // px, keeps each saved image small
+  const LOCALE = "ru-RU";
+
+  /** Russian plural forms: plural(1, "блюдо", "блюда", "блюд") -> "блюдо" */
+  function plural(n, one, few, many) {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return one;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return few;
+    return many;
+  }
+
+  const mealsWord = (n) => plural(n, "блюдо", "блюда", "блюд");
 
   // ---------------- tab switching ----------------
 
@@ -143,15 +142,15 @@
   function dayLabel(ts) {
     const now = new Date();
     const d = new Date(ts);
-    if (isSameDay(ts, now)) return "Today";
+    if (isSameDay(ts, now)) return "Сегодня";
     const yesterday = new Date(now);
     yesterday.setDate(now.getDate() - 1);
-    if (isSameDay(ts, yesterday)) return "Yesterday";
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    if (isSameDay(ts, yesterday)) return "Вчера";
+    return d.toLocaleDateString(LOCALE, { month: "short", day: "numeric" });
   }
 
   function timeLabel(ts) {
-    return new Date(ts).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    return new Date(ts).toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit" });
   }
 
   function todaysFoodTotals() {
@@ -174,18 +173,18 @@
     if (!el) return;
     const t = todaysFoodTotals();
     if (t.count === 0) {
-      el.innerHTML = `<p class="home-today-empty">Nothing logged today yet — scan a meal to start tracking.</p>`;
+      el.innerHTML = `<p class="home-today-empty">Сегодня пока ничего не записано — отсканируйте блюдо, чтобы начать учёт.</p>`;
       return;
     }
     el.innerHTML = `
-      <h3 class="home-today-title">Today so far</h3>
+      <h3 class="home-today-title">Сегодня на данный момент</h3>
       <div class="macro-grid">
-        <div class="macro-cell macro-cal"><span class="macro-value">${Math.round(t.calories)}</span><span class="macro-label">kcal</span></div>
-        <div class="macro-cell"><span class="macro-value">${Math.round(t.protein)}g</span><span class="macro-label">protein</span></div>
-        <div class="macro-cell"><span class="macro-value">${Math.round(t.fat)}g</span><span class="macro-label">fat</span></div>
-        <div class="macro-cell"><span class="macro-value">${Math.round(t.carbs)}g</span><span class="macro-label">carbs</span></div>
+        <div class="macro-cell macro-cal"><span class="macro-value">${Math.round(t.calories)}</span><span class="macro-label">ккал</span></div>
+        <div class="macro-cell"><span class="macro-value">${Math.round(t.protein)} г</span><span class="macro-label">белки</span></div>
+        <div class="macro-cell"><span class="macro-value">${Math.round(t.fat)} г</span><span class="macro-label">жиры</span></div>
+        <div class="macro-cell"><span class="macro-value">${Math.round(t.carbs)} г</span><span class="macro-label">углеводы</span></div>
       </div>
-      <p class="home-today-sub">${t.count} meal${t.count === 1 ? "" : "s"} scanned today</p>
+      <p class="home-today-sub">Отсканировано сегодня: ${t.count} ${mealsWord(t.count)}</p>
     `;
   }
 
@@ -196,10 +195,11 @@
 
     let title, detail;
     if (entry.type === "food") {
-      title = entry.data.foodName || "Unrecognized dish";
-      detail = `${Math.round(entry.data.calories ?? 0)} kcal · P${Math.round(entry.data.proteinGrams ?? 0)} F${Math.round(entry.data.fatGrams ?? 0)} C${Math.round(entry.data.carbsGrams ?? 0)}`;
+      title = entry.data.foodName || "Блюдо не распознано";
+      // Б / Ж / У = белки / жиры / углеводы
+      detail = `${Math.round(entry.data.calories ?? 0)} ккал · Б${Math.round(entry.data.proteinGrams ?? 0)} Ж${Math.round(entry.data.fatGrams ?? 0)} У${Math.round(entry.data.carbsGrams ?? 0)}`;
     } else {
-      title = "Body estimate";
+      title = "Оценка состава тела";
       detail = `${entry.data.rangeLow ?? "--"}–${entry.data.rangeHigh ?? "--"}% · ${entry.data.category || ""}`;
     }
 
@@ -211,7 +211,7 @@
           <p class="profile-entry-detail">${detail}</p>
         </div>
         <span class="profile-entry-time">${timeLabel(entry.timestamp)}</span>
-        <button class="profile-entry-delete" data-delete-id="${entry.id}" aria-label="Delete">✕</button>
+        <button class="profile-entry-delete" data-delete-id="${entry.id}" aria-label="Удалить">✕</button>
       </div>
     `;
   }
@@ -234,7 +234,7 @@
 
     const t = todaysFoodTotals();
     summaryEl.innerHTML = t.count
-      ? `<p class="profile-summary-text"><strong>${Math.round(t.calories)} kcal</strong> logged today across ${t.count} meal${t.count === 1 ? "" : "s"}</p>`
+      ? `<p class="profile-summary-text">Сегодня записано <strong>${Math.round(t.calories)} ккал</strong> (${t.count} ${mealsWord(t.count)})</p>`
       : "";
 
     // group by day label, preserving newest-first order
@@ -268,7 +268,7 @@
   const clearBtn = document.getElementById("profile-clear-btn");
   if (clearBtn) {
     clearBtn.addEventListener("click", () => {
-      if (confirm("Delete all saved scans on this device? This can't be undone.")) {
+      if (confirm("Удалить все сохранённые сканы на этом устройстве? Это действие нельзя отменить.")) {
         clearAll();
       }
     });

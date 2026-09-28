@@ -1,6 +1,3 @@
-// HealthyWay backend
-// Talks to Gemini on the frontend's behalf so the API key never reaches the browser.
-
 import "dotenv/config"
 import express from "express";
 import path from "path";
@@ -72,21 +69,21 @@ async function callGeminiForJson({ base64Image, mimeType, promptText }) {
     });
   } catch (networkErr) {
     if (networkErr.name === "TimeoutError") {
-      throw new Error("The AI took too long to respond. Please try again.");
+      throw new Error("ИИ слишком долго отвечает. Попробуйте ещё раз.");
     }
-    throw new Error("Could not reach the AI service. Check your connection and try again.");
+    throw new Error("Не удалось связаться с сервисом ИИ. Проверьте подключение и попробуйте снова.");
   }
 
   if (!response.ok) {
     const errBody = await response.text().catch(() => "");
     console.error("Gemini API error:", response.status, errBody);
     if (response.status === 400) {
-      throw new Error("That image couldn't be processed. Try a clearer photo.");
+      throw new Error("Не удалось обработать это изображение. Попробуйте более чёткое фото.");
     }
     if (response.status === 429) {
-      throw new Error("Too many requests right now. Please wait a moment and try again.");
+      throw new Error("Слишком много запросов. Подождите немного и попробуйте снова.");
     }
-    throw new Error("The AI service had a problem. Please try again shortly.");
+    throw new Error("Проблема на стороне сервиса ИИ. Попробуйте ещё раз чуть позже.");
   }
 
   const data = await response.json();
@@ -96,20 +93,23 @@ async function callGeminiForJson({ base64Image, mimeType, promptText }) {
     // This happens sometimes if Gemini's safety filters block the image/response.
     const finishReason = data?.candidates?.[0]?.finishReason;
     if (finishReason === "SAFETY") {
-      throw new Error("This image was flagged by the AI's safety filters. Try a different photo.");
+      throw new Error("Это изображение отклонено фильтрами безопасности ИИ. Попробуйте другое фото.");
     }
-    throw new Error("The AI didn't return a usable answer. Please try again.");
+    throw new Error("ИИ не вернул подходящий ответ. Попробуйте ещё раз.");
   }
 
   try {
     return JSON.parse(textPart);
   } catch {
     console.error("Failed to parse Gemini JSON output:", textPart);
-    throw new Error("The AI's answer wasn't in the expected format. Please try again.");
+    throw new Error("Ответ ИИ пришёл в неожиданном формате. Попробуйте ещё раз.");
   }
 }
 
 // ---------- /api/analyze-food ----------
+// The prompts stay in English (the model follows them more reliably that way).
+// JSON keys and the "low" | "medium" | "high" values stay in English too, so the
+// frontend keeps working; only the human-readable text values are requested in Russian.
 
 const FOOD_PROMPT = `
 You are a nutrition estimation assistant. You will be shown one photo of a meal.
@@ -118,11 +118,14 @@ Identify the food and estimate its nutrition. Since you cannot weigh the food or
 ingredients hidden inside the dish (oil, butter, sauce, sugar), give your best-effort
 approximate estimate rather than refusing.
 
+Write every human-readable text value ("foodName", "portionDescription") in Russian.
+Keep the JSON keys and the "confidence" values exactly as shown below (in English).
+
 Respond with ONLY a JSON object in exactly this shape, no extra text, no markdown fences:
 
 {
-  "foodName": "short name of the dish, e.g. 'Grilled chicken with avocado and greens'",
-  "portionDescription": "one short sentence estimating portion size, e.g. 'Approx. 350g plate, medium portion'",
+  "foodName": "short name of the dish in Russian, e.g. 'Куриная грудка на гриле с авокадо и зеленью'",
+  "portionDescription": "one short sentence in Russian estimating portion size, e.g. 'Примерно 350 г, порция средняя'",
   "calories": <number, kcal for the whole visible portion>,
   "proteinGrams": <number>,
   "fatGrams": <number>,
@@ -130,7 +133,7 @@ Respond with ONLY a JSON object in exactly this shape, no extra text, no markdow
   "confidence": "low" | "medium" | "high"
 }
 
-If the photo does not show food at all, set "foodName" to "No food detected in this photo",
+If the photo does not show food at all, set "foodName" to "На фото не найдена еда",
 set all numeric fields to 0, and set "confidence" to "low".
 
 Use "confidence": "low" whenever the dish, portion size, or hidden ingredients (like added oil
@@ -141,9 +144,9 @@ commonly known dish with an obvious portion size.
 app.post("/api/analyze-food", async (req, res) => {
   try {
     const { image, mimeType } = req.body || {};
-    if (!image) return badRequest(res, "No image was provided.");
+    if (!image) return badRequest(res, "Изображение не передано.");
     if (!mimeType || !mimeType.startsWith("image/")) {
-      return badRequest(res, "That file doesn't look like an image.");
+      return badRequest(res, "Этот файл не похож на изображение.");
     }
 
     const result = await callGeminiForJson({
@@ -155,7 +158,7 @@ app.post("/api/analyze-food", async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error("analyze-food error:", err.message);
-    res.status(502).json({ error: err.message || "Food analysis failed." });
+    res.status(502).json({ error: err.message || "Не удалось проанализировать блюдо." });
   }
 });
 
@@ -184,23 +187,26 @@ visible vascularity, fat distribution, and the height/weight context above:
 This is for casual self-tracking only, never a medical or clinical measurement, and you
 should treat it that way: give wide-enough ranges that you are not implying false precision.
 
+Write every human-readable text value ("category", "muscleCategory") in Russian.
+Keep the JSON keys and the "confidence" values exactly as shown below (in English).
+
 Respond with ONLY a JSON object in exactly this shape, no extra text, no markdown fences:
 
 {
   "rangeLow": <number, lower bound of estimated body fat percent>,
   "rangeHigh": <number, upper bound of estimated body fat percent>,
-  "category": "one short phrase, e.g. 'Athletic range' or 'Average range' — never a medical term",
+  "category": "one short phrase in Russian, e.g. 'Атлетичный диапазон' or 'Средний диапазон' — never a medical term",
   "muscleLow": <number, lower bound of estimated muscle-mass percent>,
   "muscleHigh": <number, upper bound of estimated muscle-mass percent>,
-  "muscleCategory": "one short phrase, e.g. 'Below average', 'Average', 'Above average'",
+  "muscleCategory": "one short phrase in Russian, e.g. 'Ниже среднего', 'Средний', 'Выше среднего'",
   "confidence": "low" | "medium" | "high"
 }
 
 Keep each range at least 4 percentage points wide. If the photo doesn't clearly show a
 person's body (too dark, too zoomed in, not a person, face-only, heavy clothing that hides
-the body shape), respond with rangeLow: 0, rangeHigh: 0, category: "Could not estimate from
-this photo — try a clearer full-body photo", muscleLow: 0, muscleHigh: 0, muscleCategory: "",
-confidence: "low".
+the body shape), respond with rangeLow: 0, rangeHigh: 0, category: "Не удалось оценить по
+этому фото — попробуйте более чёткое фото в полный рост", muscleLow: 0, muscleHigh: 0,
+muscleCategory: "", confidence: "low".
 
 Never mention specific diseases, health risks, or give medical advice. Never comment on
 attractiveness. Stay purely descriptive and neutral.
@@ -210,12 +216,12 @@ attractiveness. Stay purely descriptive and neutral.
 app.post("/api/analyze-body", async (req, res) => {
   try {
     const { image, mimeType, heightCm, weightKg } = req.body || {};
-    if (!image) return badRequest(res, "No image was provided.");
+    if (!image) return badRequest(res, "Изображение не передано.");
     if (!mimeType || !mimeType.startsWith("image/")) {
-      return badRequest(res, "That file doesn't look like an image.");
+      return badRequest(res, "Этот файл не похож на изображение.");
     }
     if (!heightCm || !weightKg) {
-      return badRequest(res, "Height and weight are required for a body estimate.");
+      return badRequest(res, "Для оценки состава тела нужны рост и вес.");
     }
 
     const result = await callGeminiForJson({
@@ -227,7 +233,7 @@ app.post("/api/analyze-body", async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error("analyze-body error:", err.message);
-    res.status(502).json({ error: err.message || "Body estimate failed." });
+    res.status(502).json({ error: err.message || "Не удалось оценить состав тела." });
   }
 });
 
@@ -239,6 +245,8 @@ app.post("/api/analyze-body", async (req, res) => {
 
 const CHAT_SYSTEM_INSTRUCTION = `
 You are the "Coach" chat inside HealthyWay, a friendly nutrition and fitness assistant.
+
+Always reply in Russian, unless the user clearly writes in another language.
 
 You can be shown photos — most often a restaurant/cafe menu, or a plate of food — and asked
 for a recommendation or opinion. When shown a menu photo, pick one or two specific items you'd
@@ -294,21 +302,21 @@ async function callGeminiForChat(messages) {
     });
   } catch (networkErr) {
     if (networkErr.name === "TimeoutError") {
-      throw new Error("The AI took too long to respond. Please try again.");
+      throw new Error("ИИ слишком долго отвечает. Попробуйте ещё раз.");
     }
-    throw new Error("Could not reach the AI service. Check your connection and try again.");
+    throw new Error("Не удалось связаться с сервисом ИИ. Проверьте подключение и попробуйте снова.");
   }
 
   if (!response.ok) {
     const errBody = await response.text().catch(() => "");
     console.error("Gemini chat API error:", response.status, errBody);
     if (response.status === 400) {
-      throw new Error("That message or photo couldn't be processed.");
+      throw new Error("Не удалось обработать это сообщение или фото.");
     }
     if (response.status === 429) {
-      throw new Error("Too many requests right now. Please wait a moment and try again.");
+      throw new Error("Слишком много запросов. Подождите немного и попробуйте снова.");
     }
-    throw new Error("The AI service had a problem. Please try again shortly.");
+    throw new Error("Проблема на стороне сервиса ИИ. Попробуйте ещё раз чуть позже.");
   }
 
   const data = await response.json();
@@ -318,9 +326,9 @@ async function callGeminiForChat(messages) {
   if (!text) {
     const finishReason = data?.candidates?.[0]?.finishReason;
     if (finishReason === "SAFETY") {
-      throw new Error("That message or photo was flagged by the AI's safety filters.");
+      throw new Error("Это сообщение или фото отклонено фильтрами безопасности ИИ.");
     }
-    throw new Error("The AI didn't return a usable answer. Please try again.");
+    throw new Error("ИИ не вернул подходящий ответ. Попробуйте ещё раз.");
   }
 
   return text;
@@ -332,17 +340,17 @@ app.post("/api/chat", async (req, res) => {
   try {
     const { messages } = req.body || {};
     if (!Array.isArray(messages) || messages.length === 0) {
-      return badRequest(res, "No message was provided.");
+      return badRequest(res, "Сообщение не передано.");
     }
     if (messages.length > MAX_CHAT_MESSAGES) {
-      return badRequest(res, "This conversation has gotten too long — please start a new chat.");
+      return badRequest(res, "Диалог стал слишком длинным — начните новый чат.");
     }
     for (const m of messages) {
       if (typeof m.text !== "string" && !m.image) {
-        return badRequest(res, "Each message needs text or a photo.");
+        return badRequest(res, "В каждом сообщении должен быть текст или фото.");
       }
       if (m.image && (!m.mimeType || !m.mimeType.startsWith("image/"))) {
-        return badRequest(res, "That attached file doesn't look like an image.");
+        return badRequest(res, "Прикреплённый файл не похож на изображение.");
       }
     }
 
@@ -350,7 +358,7 @@ app.post("/api/chat", async (req, res) => {
     res.json({ reply });
   } catch (err) {
     console.error("chat error:", err.message);
-    res.status(502).json({ error: err.message || "Chat failed." });
+    res.status(502).json({ error: err.message || "Не удалось получить ответ в чате." });
   }
 });
 

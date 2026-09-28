@@ -7,6 +7,15 @@ const BACKEND_URL = ""; // same-origin. If backend runs elsewhere, e.g. "https:/
 const MAX_FILE_MB = 8;
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
+// The API returns confidence as "low" | "medium" | "high" (kept in English so the
+// JSON schema stays stable); we translate it only for display.
+const CONFIDENCE_RU = { low: "низкая", medium: "средняя", high: "высокая" };
+
+function confidenceText(value) {
+  if (!value) return "";
+  return `Точность оценки: ${CONFIDENCE_RU[value] || value}`;
+}
+
 // ---------- generic helpers ----------
 
 function bytesToBase64(file) {
@@ -17,18 +26,18 @@ function bytesToBase64(file) {
       const base64 = reader.result.split(",")[1];
       resolve(base64);
     };
-    reader.onerror = () => reject(new Error("Could not read that file."));
+    reader.onerror = () => reject(new Error("Не удалось прочитать этот файл."));
     reader.readAsDataURL(file);
   });
 }
 
 function validateImageFile(file) {
-  if (!file) return "No file selected.";
+  if (!file) return "Файл не выбран.";
   if (!ACCEPTED_TYPES.includes(file.type)) {
-    return "Please choose a JPG, PNG, or WEBP image.";
+    return "Выберите изображение в формате JPG, PNG или WEBP.";
   }
   if (file.size > MAX_FILE_MB * 1024 * 1024) {
-    return `That image is over ${MAX_FILE_MB}MB — please choose a smaller one.`;
+    return `Изображение больше ${MAX_FILE_MB} МБ — выберите файл поменьше.`;
   }
   return null; // valid
 }
@@ -44,12 +53,12 @@ async function postImageToBackend(endpoint, base64Image, mimeType, extra = {}) {
   try {
     data = await res.json();
   } catch {
-    throw new Error("The server sent back something unexpected. Please try again.");
+    throw new Error("Сервер вернул неожиданный ответ. Попробуйте ещё раз.");
   }
 
   if (!res.ok) {
     // backend sends { error: "human readable message" }
-    throw new Error(data.error || "The request failed. Please try again.");
+    throw new Error(data.error || "Запрос не удался. Попробуйте ещё раз.");
   }
 
   return data;
@@ -173,7 +182,7 @@ function setupUploadWidget({ prefix, endpoint, onResult, getExtraFields, require
       showState("result");
     } catch (err) {
       showState("error");
-      errorTextEl.textContent = err.message || "Something went wrong. Please try again.";
+      errorTextEl.textContent = err.message || "Что-то пошло не так. Попробуйте ещё раз.";
     }
   });
 
@@ -188,15 +197,13 @@ setupUploadWidget({
   onResult(data, file) {
     // expected shape from backend:
     // { foodName, portionDescription, calories, proteinGrams, fatGrams, carbsGrams, confidence }
-    document.getElementById("food-name").textContent = data.foodName || "Unrecognized dish";
+    document.getElementById("food-name").textContent = data.foodName || "Блюдо не распознано";
     document.getElementById("food-portion").textContent = data.portionDescription || "";
     document.getElementById("food-cal").textContent = Math.round(data.calories ?? 0);
-    document.getElementById("food-protein").textContent = `${Math.round(data.proteinGrams ?? 0)}g`;
-    document.getElementById("food-fat").textContent = `${Math.round(data.fatGrams ?? 0)}g`;
-    document.getElementById("food-carbs").textContent = `${Math.round(data.carbsGrams ?? 0)}g`;
-    document.getElementById("food-confidence").textContent = data.confidence
-      ? `Confidence: ${data.confidence}`
-      : "";
+    document.getElementById("food-protein").textContent = `${Math.round(data.proteinGrams ?? 0)} г`;
+    document.getElementById("food-fat").textContent = `${Math.round(data.fatGrams ?? 0)} г`;
+    document.getElementById("food-carbs").textContent = `${Math.round(data.carbsGrams ?? 0)} г`;
+    document.getElementById("food-confidence").textContent = confidenceText(data.confidence);
 
     // Save this scan to the Profile tab's history (see history.js).
     if (window.HealthyWayHistory) {
@@ -229,9 +236,7 @@ setupUploadWidget({
     document.getElementById("body-muscle-low").textContent = data.muscleLow ?? "--";
     document.getElementById("body-muscle-high").textContent = data.muscleHigh ?? "--";
     document.getElementById("body-muscle-category").textContent = data.muscleCategory || "";
-    document.getElementById("body-confidence").textContent = data.confidence
-      ? `Confidence: ${data.confidence}`
-      : "";
+    document.getElementById("body-confidence").textContent = confidenceText(data.confidence);
 
     // Reset the recommendation panel for this fresh result.
     resetRecommendationPanel();
@@ -305,21 +310,21 @@ document.getElementById("reco-form").addEventListener("submit", (e) => {
 
   if (fatMid !== null && fatMid > 20) {
     // Cutting: moderate deficit, higher protein to preserve muscle.
-    goalTitle = "Suggested target: gradual fat loss";
-    goalSub = "Based on your estimated body-fat range being above 20%.";
+    goalTitle = "Рекомендуемая цель: постепенное снижение веса";
+    goalSub = "Исходя из того, что оценка процента жира выше 20%.";
     calories = tdee * 0.8; // ~20% deficit — a commonly used, sustainable range
     proteinPerKg = 2.0;
     fatPerKg = 0.8;
   } else if (fatMid !== null && fatMid < 12) {
     // Lean: modest surplus to support muscle gain.
-    goalTitle = "Suggested target: lean muscle gain";
-    goalSub = "Based on your estimated body-fat range being on the leaner side.";
+    goalTitle = "Рекомендуемая цель: набор сухой мышечной массы";
+    goalSub = "Исходя из того, что оценка процента жира довольно низкая.";
     calories = tdee * 1.12; // ~12% surplus
     proteinPerKg = 1.8;
     fatPerKg = 0.9;
   } else {
-    goalTitle = "Suggested target: maintenance";
-    goalSub = "Your estimated body-fat range is in a middle zone — this keeps your intake near what you burn.";
+    goalTitle = "Рекомендуемая цель: поддержание веса";
+    goalSub = "Оценка процента жира находится в средней зоне — калорийность рациона держится около вашего расхода.";
     calories = tdee;
     proteinPerKg = 1.6;
     fatPerKg = 0.9;
@@ -338,9 +343,9 @@ document.getElementById("reco-form").addEventListener("submit", (e) => {
   document.getElementById("reco-goal-title").textContent = goalTitle;
   document.getElementById("reco-goal-sub").textContent = goalSub;
   document.getElementById("reco-cal").textContent = Math.round(calories);
-  document.getElementById("reco-protein").textContent = `${Math.round(proteinGrams)}g`;
-  document.getElementById("reco-fat").textContent = `${Math.round(fatGrams)}g`;
-  document.getElementById("reco-carbs").textContent = `${Math.round(carbsGrams)}g`;
+  document.getElementById("reco-protein").textContent = `${Math.round(proteinGrams)} г`;
+  document.getElementById("reco-fat").textContent = `${Math.round(fatGrams)} г`;
+  document.getElementById("reco-carbs").textContent = `${Math.round(carbsGrams)} г`;
 
   document.getElementById("reco-minor-notice").hidden = true;
   document.getElementById("reco-result").hidden = false;
