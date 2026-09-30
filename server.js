@@ -237,6 +237,111 @@ app.post("/api/analyze-body", async (req, res) => {
   }
 });
 
+// ---------- /api/workout-plan ----------
+//
+// Generates a 7-day workout plan from a body photo + height/weight/goal, and,
+// when mode is "chronic", adapts the plan around the person's selected chronic
+// conditions — even if that means deviating from their stated goal for safety.
+
+const GOAL_LABELS = {
+  lose: "снижение веса / жиросжигание",
+  gain: "набор мышечной массы",
+  maintain: "поддержание текущей формы",
+};
+
+function buildWorkoutPlanPrompt({ heightCm, weightKg, goal, mode, diseases }) {
+  const goalLabel = GOAL_LABELS[goal] || GOAL_LABELS.maintain;
+  const hasDiseases = mode === "chronic" && Array.isArray(diseases) && diseases.length > 0;
+
+  const conditionsBlock = hasDiseases
+    ? `The person has reported the following chronic condition(s): ${diseases.join(", ")}.
+Safety around these conditions takes priority over the stated goal. Adapt exercise type,
+intensity, volume, and impact level to what's actually safe for each condition. If the
+stated goal isn't safely achievable as-is given these conditions, say so plainly in
+"goalSummary" and build the closest safe alternative instead of ignoring the conditions.
+Call out anything the person should avoid, and anything that needs medical clearance first,
+in "cautions".`
+    : `The person has not reported any chronic conditions — build a standard plan for a
+generally healthy adult toward their stated goal. Leave "cautions" as an empty array.`;
+
+  return `
+You are a cautious fitness-planning assistant. You will be shown one photo of a person's
+body (full body if possible), along with their height, weight, and goal.
+
+- Height: ${heightCm} cm
+- Weight: ${weightKg} kg
+- Stated goal: ${goalLabel}
+
+${conditionsBlock}
+
+Use the photo only for general context (build, visible mobility or posture cues) — not to
+diagnose anything. Never mention specific diseases as if you can see them in the photo, and
+never comment on attractiveness.
+
+Build a practical 7-day (Monday-Sunday) workout plan, including rest or active-recovery days
+where appropriate. Every exercise name, note, and text field must be written in Russian.
+
+Respond with ONLY a JSON object in exactly this shape, no extra text, no markdown fences:
+
+{
+  "planTitle": "short plan title in Russian",
+  "goalSummary": "2-3 sentences in Russian explaining the approach, and explicitly noting any way the plan had to deviate from the stated goal because of a condition",
+  "days": [
+    {
+      "day": "Понедельник",
+      "focus": "short focus label, e.g. 'Верх тела' or 'Отдых'",
+      "exercises": [
+        { "name": "название упражнения", "details": "напр. 3 подхода по 10–12 повторений, умеренный темп" }
+      ],
+      "notes": "any condition-specific adjustment for this day, or empty string"
+    }
+    // ... one entry per day, Monday through Sunday
+  ],
+  "cautions": ["short safety notes in Russian — empty array if no conditions were reported"],
+  "medicalDisclaimer": "one sentence in Russian reminding them this isn't medical advice and to get clearance from a doctor before starting, especially with a chronic condition"
+}
+
+If the photo doesn't clearly show a person, still build the plan from the height/weight/goal
+alone, and note in "goalSummary" that the photo wasn't usable for context.
+`.trim();
+}
+
+app.post("/api/workout-plan", async (req, res) => {
+  try {
+    const { image, mimeType, heightCm, weightKg, goal, mode, diseases } = req.body || {};
+    if (!image) return badRequest(res, "Изображение не передано.");
+    if (!mimeType || !mimeType.startsWith("image/")) {
+      return badRequest(res, "Этот файл не похож на изображение.");
+    }
+    if (!heightCm || !weightKg) {
+      return badRequest(res, "Для плана тренировок нужны рост и вес.");
+    }
+    if (!GOAL_LABELS[goal]) {
+      return badRequest(res, "Не указана цель тренировок.");
+    }
+    if (mode === "chronic" && (!Array.isArray(diseases) || diseases.length === 0)) {
+      return badRequest(res, "Выберите хотя бы одно заболевание, либо переключитесь на обычный план.");
+    }
+
+    const result = await callGeminiForJson({
+      base64Image: image,
+      mimeType,
+      promptText: buildWorkoutPlanPrompt({
+        heightCm,
+        weightKg,
+        goal,
+        mode,
+        diseases: mode === "chronic" ? diseases : [],
+      }),
+    });
+
+    res.json(result);
+  } catch (err) {
+    console.error("workout-plan error:", err.message);
+    res.status(502).json({ error: err.message || "Не удалось составить план тренировок." });
+  }
+});
+
 // ---------- /api/chat ----------
 //
 // Free-form chat with photo support — e.g. "here's a restaurant menu, what should I order?"

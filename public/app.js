@@ -350,3 +350,183 @@ document.getElementById("reco-form").addEventListener("submit", (e) => {
   document.getElementById("reco-minor-notice").hidden = true;
   document.getElementById("reco-result").hidden = false;
 });
+
+// ---------- workout plan (photo + height/weight/goal, optionally chronic conditions) ----------
+
+(function () {
+  const dropzone = document.getElementById("plan-dropzone");
+  const input = document.getElementById("plan-input");
+  const emptyState = document.getElementById("plan-empty");
+  const previewImg = document.getElementById("plan-preview");
+  const analyzeBtn = document.getElementById("plan-analyze-btn");
+  const resetBtn = document.getElementById("plan-reset-btn");
+
+  const idleEl = document.getElementById("plan-idle");
+  const loadingEl = document.getElementById("plan-loading");
+  const errorEl = document.getElementById("plan-error");
+  const errorTextEl = document.getElementById("plan-error-text");
+  const retryBtn = document.getElementById("plan-retry-btn");
+  const resultEl = document.getElementById("plan-result");
+
+  const diseasesForm = document.getElementById("plan-diseases-form");
+  const modeChronicRadio = document.getElementById("plan-mode-chronic");
+  const modeRegularRadio = document.getElementById("plan-mode-regular");
+  const heightInput = document.getElementById("plan-height-input");
+  const weightInput = document.getElementById("plan-weight-input");
+
+  let currentFile = null;
+
+  function showState(state) {
+    idleEl.hidden = state !== "idle";
+    loadingEl.hidden = state !== "loading";
+    errorEl.hidden = state !== "error";
+    resultEl.hidden = state !== "result";
+  }
+
+  function selectedDiseases() {
+    return Array.from(document.querySelectorAll(".plan-disease-cb:checked")).map((cb) => cb.value);
+  }
+
+  function isChronicMode() {
+    return modeChronicRadio.checked;
+  }
+
+  function extraFieldsOk() {
+    if (!heightInput.value.trim() || !weightInput.value.trim()) return false;
+    if (isChronicMode() && selectedDiseases().length === 0) return false;
+    return true;
+  }
+
+  function updateAnalyzeState() {
+    analyzeBtn.disabled = !(currentFile && extraFieldsOk());
+  }
+
+  [modeRegularRadio, modeChronicRadio].forEach((radio) => {
+    radio.addEventListener("change", () => {
+      diseasesForm.hidden = !isChronicMode();
+      updateAnalyzeState();
+    });
+  });
+
+  document.querySelectorAll(".plan-disease-cb").forEach((cb) => {
+    cb.addEventListener("change", updateAnalyzeState);
+  });
+  [heightInput, weightInput].forEach((el) => el.addEventListener("input", updateAnalyzeState));
+
+  function setFile(file) {
+    const problem = validateImageFile(file);
+    if (problem) {
+      showState("error");
+      errorTextEl.textContent = problem;
+      return;
+    }
+    currentFile = file;
+    const url = URL.createObjectURL(file);
+    previewImg.src = url;
+    previewImg.hidden = false;
+    emptyState.hidden = true;
+    resetBtn.hidden = false;
+    updateAnalyzeState();
+    showState("idle");
+  }
+
+  function reset() {
+    currentFile = null;
+    previewImg.hidden = true;
+    previewImg.src = "";
+    emptyState.hidden = false;
+    resetBtn.hidden = true;
+    input.value = "";
+    updateAnalyzeState();
+    showState("idle");
+  }
+
+  input.addEventListener("change", (e) => {
+    if (e.target.files && e.target.files[0]) setFile(e.target.files[0]);
+  });
+
+  ["dragenter", "dragover"].forEach((evt) =>
+    dropzone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      dropzone.classList.add("drag-over");
+    })
+  );
+  ["dragleave", "drop"].forEach((evt) =>
+    dropzone.addEventListener(evt, (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("drag-over");
+    })
+  );
+  dropzone.addEventListener("drop", (e) => {
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) setFile(file);
+  });
+
+  resetBtn.addEventListener("click", reset);
+  retryBtn.addEventListener("click", () => showState("idle"));
+
+  function renderPlan(data) {
+    document.getElementById("plan-title").textContent = data.planTitle || "Ваш план тренировок";
+    document.getElementById("plan-goal-summary").textContent = data.goalSummary || "";
+
+    const cautionsBlock = document.getElementById("plan-cautions-block");
+    const cautionsList = document.getElementById("plan-cautions-list");
+    const cautions = Array.isArray(data.cautions) ? data.cautions.filter(Boolean) : [];
+    if (cautions.length > 0) {
+      cautionsList.innerHTML = cautions.map((c) => `<li>${c}</li>`).join("");
+      cautionsBlock.hidden = false;
+    } else {
+      cautionsList.innerHTML = "";
+      cautionsBlock.hidden = true;
+    }
+
+    const daysList = document.getElementById("plan-days-list");
+    const days = Array.isArray(data.days) ? data.days : [];
+    daysList.innerHTML = days
+      .map((d) => {
+        const exercises = Array.isArray(d.exercises) ? d.exercises : [];
+        const exercisesHtml = exercises.length
+          ? `<ul style="margin:6px 0 0; padding-left:18px; font-size:0.9rem; color:var(--ink-dim);">
+              ${exercises
+                .map((ex) => `<li><span style="color:var(--ink);">${ex.name || ""}</span>${ex.details ? ` — ${ex.details}` : ""}</li>`)
+                .join("")}
+            </ul>`
+          : "";
+        const noteHtml = d.notes
+          ? `<p style="margin:6px 0 0; font-size:0.82rem; color:var(--amber);">${d.notes}</p>`
+          : "";
+        return `
+          <div style="border-top:1px solid var(--line); padding:14px 0;">
+            <p style="margin:0; font-family:var(--font-display); font-size:0.95rem; color:var(--green);">
+              ${d.day || ""}${d.focus ? ` · ${d.focus}` : ""}
+            </p>
+            ${exercisesHtml}
+            ${noteHtml}
+          </div>
+        `;
+      })
+      .join("");
+  }
+
+  analyzeBtn.addEventListener("click", async () => {
+    if (!currentFile || !extraFieldsOk()) return;
+    showState("loading");
+    try {
+      const base64 = await bytesToBase64(currentFile);
+      const data = await postImageToBackend("/api/workout-plan", base64, currentFile.type, {
+        heightCm: parseFloat(heightInput.value) || null,
+        weightKg: parseFloat(weightInput.value) || null,
+        goal: document.getElementById("plan-goal").value,
+        mode: isChronicMode() ? "chronic" : "regular",
+        diseases: isChronicMode() ? selectedDiseases() : [],
+      });
+      renderPlan(data);
+      showState("result");
+    } catch (err) {
+      showState("error");
+      errorTextEl.textContent = err.message || "Что-то пошло не так. Попробуйте ещё раз.";
+    }
+  });
+
+  updateAnalyzeState();
+})();

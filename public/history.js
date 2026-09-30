@@ -33,7 +33,6 @@
     window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
 
     if (tabName === "profile") renderProfileTab();
-    if (tabName === "home") renderHomeToday();
   }
 
   navButtons.forEach((btn) => {
@@ -43,7 +42,7 @@
     btn.addEventListener("click", () => showTab(btn.dataset.goto));
   });
 
-  showTab("home"); // default tab on load
+  showTab("food"); // default tab on load
 
   // ---------------- storage helpers ----------------
 
@@ -114,7 +113,6 @@
     const entries = getHistory();
     entries.unshift(entry); // newest first
     saveHistory(entries.slice(0, MAX_ENTRIES));
-    renderHomeToday();
     return entry;
   }
 
@@ -122,13 +120,11 @@
     const entries = getHistory().filter((e) => e.id !== id);
     saveHistory(entries);
     renderProfileTab();
-    renderHomeToday();
   }
 
   function clearAll() {
     saveHistory([]);
     renderProfileTab();
-    renderHomeToday();
   }
 
   // ---------------- rendering ----------------
@@ -166,26 +162,6 @@
       totals.count += 1;
     }
     return totals;
-  }
-
-  function renderHomeToday() {
-    const el = document.getElementById("home-today");
-    if (!el) return;
-    const t = todaysFoodTotals();
-    if (t.count === 0) {
-      el.innerHTML = `<p class="home-today-empty">Сегодня пока ничего не записано — отсканируйте блюдо, чтобы начать учёт.</p>`;
-      return;
-    }
-    el.innerHTML = `
-      <h3 class="home-today-title">Сегодня на данный момент</h3>
-      <div class="macro-grid">
-        <div class="macro-cell macro-cal"><span class="macro-value">${Math.round(t.calories)}</span><span class="macro-label">ккал</span></div>
-        <div class="macro-cell"><span class="macro-value">${Math.round(t.protein)} г</span><span class="macro-label">белки</span></div>
-        <div class="macro-cell"><span class="macro-value">${Math.round(t.fat)} г</span><span class="macro-label">жиры</span></div>
-        <div class="macro-cell"><span class="macro-value">${Math.round(t.carbs)} г</span><span class="macro-label">углеводы</span></div>
-      </div>
-      <p class="home-today-sub">Отсканировано сегодня: ${t.count} ${mealsWord(t.count)}</p>
-    `;
   }
 
   function entryLine(entry) {
@@ -273,8 +249,6 @@
       }
     });
   }
-
-  renderHomeToday();
 
   // Exposed so app.js can add an entry right after a successful analyze call.
   window.HealthyWayHistory = { addEntry };

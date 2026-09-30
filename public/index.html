@@ -16,40 +16,6 @@
 
   <main>
 
-    <!-- ============ HOME TAB ============ -->
-    <section class="tab-panel wrap" id="tab-home" data-tab-panel="home">
-      <div class="hero">
-        <h1>Наведите камеру на тарелку.<br>Получите цифры.</h1>
-        <p class="hero-sub">
-          HealthyWay анализирует фото вашего блюда или фигуры и выдаёт оценку:
-          калории, белки, жиры, углеводы или примерный диапазон процента жира.
-          Это не лабораторный анализ, а быстрая и полезная прикидка.
-        </p>
-      </div>
-
-      <div class="home-cards">
-        <button class="home-card" data-goto="food">
-          <span class="home-card-icon home-card-icon-green">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M4 8h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-          </span>
-          <span class="home-card-title">Сканировать еду</span>
-          <span class="home-card-sub">Фото блюда → оценка калорий и БЖУ</span>
-        </button>
-
-        <button class="home-card" data-goto="body">
-          <span class="home-card-icon home-card-icon-purple">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
-          </span>
-          <span class="home-card-title">Анализ тела</span>
-          <span class="home-card-sub">Ваше фото → примерный диапазон процента жира</span>
-        </button>
-      </div>
-
-      <div class="home-today" id="home-today">
-        <!-- filled by history.js: today's totals -->
-      </div>
-    </section>
-
     <!-- ============ FOOD TAB ============ -->
     <section class="tab-panel wrap" id="tab-food" data-tab-panel="food" hidden>
       <div class="feature-head">
@@ -277,6 +243,133 @@
       </div>
     </section>
 
+    <!-- ============ PLAN TAB ============ -->
+    <section class="tab-panel wrap" id="tab-plan" data-tab-panel="plan" hidden>
+      <div class="feature-head">
+        <h2>План тренировок</h2>
+        <p>Укажите рост, вес и загрузите фото тела. ИИ составит план тренировок по дням недели.</p>
+      </div>
+
+      <div class="panel">
+        <div class="upload-col">
+
+          <div class="body-info-form" id="plan-info-form">
+            <p class="body-info-note">Рост и вес обязательны — это нужно для расчёта нагрузки.</p>
+            <div class="body-info-grid">
+              <label>Рост (см)
+                <input type="number" id="plan-height-input" min="100" max="230" step="0.1" placeholder="напр. 175" />
+              </label>
+              <label>Вес (кг)
+                <input type="number" id="plan-weight-input" min="20" max="300" step="0.1" placeholder="напр. 70" />
+              </label>
+            </div>
+          </div>
+
+          <div class="body-info-form">
+            <p class="body-info-note">Цель тренировок</p>
+            <div class="body-info-grid">
+              <label class="reco-form-full">Что вы хотите?
+                <select id="plan-goal">
+                  <option value="lose">Похудеть</option>
+                  <option value="gain">Набрать мышечную массу</option>
+                  <option value="maintain">Поддерживать форму</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="body-info-form" id="plan-mode-form">
+            <p class="body-info-note">Тип плана</p>
+            <div class="reco-form-grid">
+              <label class="reco-form-full" style="flex-direction:row; align-items:center; gap:8px;">
+                <input type="radio" name="plan-mode" id="plan-mode-regular" value="regular" checked style="width:auto;" />
+                План для здорового человека
+              </label>
+              <label class="reco-form-full" style="flex-direction:row; align-items:center; gap:8px;">
+                <input type="radio" name="plan-mode" id="plan-mode-chronic" value="chronic" style="width:auto;" />
+                План с учётом хронического заболевания
+              </label>
+            </div>
+          </div>
+
+          <div class="body-info-form" id="plan-diseases-form" hidden>
+            <p class="body-info-note">Отметьте заболевание(я) — план будет подобран с учётом них, даже если это потребует отклониться от выбранной цели.</p>
+            <div class="reco-form-grid" id="plan-diseases-grid">
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Сахарный диабет 1 типа" style="width:auto;" /> Сахарный диабет 1 типа</label>
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Сахарный диабет 2 типа" style="width:auto;" /> Сахарный диабет 2 типа</label>
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Бронхиальная астма" style="width:auto;" /> Бронхиальная астма</label>
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Артериальная гипертензия" style="width:auto;" /> Артериальная гипертензия</label>
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Стабильная ишемическая болезнь сердца" style="width:auto;" /> Стабильная ишемическая болезнь сердца</label>
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Некоторые врождённые пороки сердца" style="width:auto;" /> Некоторые врождённые пороки сердца</label>
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Сколиоз" style="width:auto;" /> Сколиоз</label>
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Артроз" style="width:auto;" /> Артроз</label>
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Хроническая боль в пояснице" style="width:auto;" /> Хроническая боль в пояснице</label>
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Хронический гастрит" style="width:auto;" /> Хронический гастрит</label>
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="ГЭРБ" style="width:auto;" /> ГЭРБ</label>
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="ХОБЛ" style="width:auto;" /> ХОБЛ</label>
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Эпилепсия" style="width:auto;" /> Эпилепсия</label>
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Гипотиреоз" style="width:auto;" /> Гипотиреоз</label>
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Ожирение" style="width:auto;" /> Ожирение</label>
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Ревматоидный артрит" style="width:auto;" /> Ревматоидный артрит</label>
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Остеопороз" style="width:auto;" /> Остеопороз</label>
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Хроническая болезнь почек" style="width:auto;" /> Хроническая болезнь почек</label>
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Анемия после лечения причины" style="width:auto;" /> Анемия после лечения причины</label>
+              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Хронические заболевания суставов" style="width:auto;" /> Хронические заболевания суставов</label>
+            </div>
+          </div>
+
+          <label class="dropzone" id="plan-dropzone" for="plan-input">
+            <input type="file" id="plan-input" accept="image/*" hidden />
+            <div class="dropzone-empty" id="plan-empty">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M4 8h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              <p>Перетащите фото тела сюда или нажмите, чтобы выбрать</p>
+              <span class="hint">Фото в полный рост, хорошее освещение</span>
+            </div>
+            <img id="plan-preview" class="preview-img" hidden />
+          </label>
+
+          <button id="plan-analyze-btn" class="btn btn-primary" disabled>Составить план тренировок</button>
+          <button id="plan-reset-btn" class="btn btn-ghost" hidden>Выбрать другое фото</button>
+        </div>
+
+        <div class="result-col">
+          <div id="plan-idle" class="result-idle">
+            <p>Здесь появится план тренировок по дням недели после составления.</p>
+          </div>
+
+          <div id="plan-loading" class="result-loading" hidden>
+            <div class="spinner"></div>
+            <p>Составляем план…</p>
+          </div>
+
+          <div id="plan-error" class="result-error" hidden>
+            <p id="plan-error-text">Что-то пошло не так.</p>
+            <button class="btn btn-ghost" id="plan-retry-btn">Попробовать снова</button>
+          </div>
+
+          <div id="plan-result" class="result-card" hidden>
+            <div class="result-title-row">
+              <h3 id="plan-title">—</h3>
+              <span class="badge">приблизительно</span>
+            </div>
+            <p class="result-portion" id="plan-goal-summary"></p>
+
+            <div id="plan-cautions-block" hidden>
+              <p class="confidence-note" style="color:var(--amber); font-weight:600;">Важно учитывать:</p>
+              <ul id="plan-cautions-list" style="margin:0 0 16px; padding-left:18px; color:var(--amber); font-size:0.88rem;"></ul>
+            </div>
+
+            <div id="plan-days-list"></div>
+
+            <p class="disclaimer disclaimer-strong">
+              Это не медицинская рекомендация. Перед началом тренировок, особенно при
+              хронических заболеваниях, проконсультируйтесь с врачом.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- ============ CHAT TAB ============ -->
     <section class="tab-panel wrap" id="tab-chat" data-tab-panel="chat" hidden>
       <div class="feature-head">
@@ -342,10 +435,6 @@
 
   <!-- ============ BOTTOM TAB BAR ============ -->
   <nav class="bottom-nav" id="bottom-nav">
-    <button class="bottom-nav-btn" data-tab="home" aria-label="Главная">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 11.5L12 4l9 7.5M5 10v9a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-9"/></svg>
-      <span>Главная</span>
-    </button>
     <button class="bottom-nav-btn" data-tab="food" aria-label="Скан еды">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M4 8h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
       <span>Еда</span>
@@ -353,6 +442,10 @@
     <button class="bottom-nav-btn" data-tab="body" aria-label="Оценка тела">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zM6 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/></svg>
       <span>Тело</span>
+    </button>
+    <button class="bottom-nav-btn" data-tab="plan" aria-label="План тренировок">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 3v3M16 3v3M4 9h16M5 6h14a1 1 0 011 1v12a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1z"/></svg>
+      <span>План</span>
     </button>
     <button class="bottom-nav-btn" data-tab="chat" aria-label="Чат с тренером">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
