@@ -530,3 +530,54 @@ document.getElementById("reco-form").addEventListener("submit", (e) => {
 
   updateAnalyzeState();
 })();
+
+// ---------- disease picker: search, counter, reset ----------
+
+(function () {
+  const searchInput = document.getElementById("dz-search-input");
+  const countEl = document.getElementById("dz-count");
+  const clearBtn = document.getElementById("dz-clear-btn");
+  const nothingEl = document.getElementById("dz-nothing");
+  const checkboxes = Array.from(document.querySelectorAll(".plan-disease-cb"));
+  const groups = Array.from(document.querySelectorAll(".dz-group"));
+  if (!searchInput || !countEl) return;
+
+  function updateCount() {
+    const n = checkboxes.filter((cb) => cb.checked).length;
+    countEl.textContent = n;
+    clearBtn.hidden = n === 0;
+  }
+
+  function applyFilter() {
+    const q = searchInput.value.trim().toLowerCase();
+    let anyVisible = false;
+    groups.forEach((group) => {
+      let groupVisible = false;
+      group.querySelectorAll(".dz-chip").forEach((chip) => {
+        const text = chip.textContent.toLowerCase();
+        const match = !q || text.includes(q);
+        chip.hidden = !match;
+        if (match) groupVisible = true;
+      });
+      group.hidden = !groupVisible;
+      if (groupVisible) anyVisible = true;
+    });
+    nothingEl.hidden = anyVisible;
+  }
+
+  checkboxes.forEach((cb) => cb.addEventListener("change", updateCount));
+  searchInput.addEventListener("input", applyFilter);
+
+  clearBtn.addEventListener("click", () => {
+    checkboxes.forEach((cb) => {
+      if (cb.checked) {
+        cb.checked = false;
+        // lets the plan form re-check whether the "make plan" button should be enabled
+        cb.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
+    updateCount();
+  });
+
+  updateCount();
+})();

@@ -293,30 +293,80 @@
           </div>
 
           <div class="body-info-form" id="plan-diseases-form" hidden>
-            <p class="body-info-note">Отметьте заболевание(я) — план будет подобран с учётом них, даже если это потребует отклониться от выбранной цели.</p>
-            <div class="reco-form-grid" id="plan-diseases-grid">
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Сахарный диабет 1 типа" style="width:auto;" /> Сахарный диабет 1 типа</label>
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Сахарный диабет 2 типа" style="width:auto;" /> Сахарный диабет 2 типа</label>
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Бронхиальная астма" style="width:auto;" /> Бронхиальная астма</label>
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Артериальная гипертензия" style="width:auto;" /> Артериальная гипертензия</label>
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Стабильная ишемическая болезнь сердца" style="width:auto;" /> Стабильная ишемическая болезнь сердца</label>
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Некоторые врождённые пороки сердца" style="width:auto;" /> Некоторые врождённые пороки сердца</label>
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Сколиоз" style="width:auto;" /> Сколиоз</label>
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Артроз" style="width:auto;" /> Артроз</label>
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Хроническая боль в пояснице" style="width:auto;" /> Хроническая боль в пояснице</label>
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Хронический гастрит" style="width:auto;" /> Хронический гастрит</label>
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="ГЭРБ" style="width:auto;" /> ГЭРБ</label>
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="ХОБЛ" style="width:auto;" /> ХОБЛ</label>
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Эпилепсия" style="width:auto;" /> Эпилепсия</label>
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Гипотиреоз" style="width:auto;" /> Гипотиреоз</label>
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Ожирение" style="width:auto;" /> Ожирение</label>
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Ревматоидный артрит" style="width:auto;" /> Ревматоидный артрит</label>
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Остеопороз" style="width:auto;" /> Остеопороз</label>
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Хроническая болезнь почек" style="width:auto;" /> Хроническая болезнь почек</label>
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Анемия после лечения причины" style="width:auto;" /> Анемия после лечения причины</label>
-              <label style="flex-direction:row; align-items:center; gap:8px;"><input type="checkbox" class="plan-disease-cb" value="Хронические заболевания суставов" style="width:auto;" /> Хронические заболевания суставов</label>
-            </div>
-          </div>
+  <p class="body-info-note">Отметьте заболевание(я) — план будет подобран с учётом них, даже если это потребует отклониться от выбранной цели.</p>
+
+  <div class="dz-toolbar">
+    <div class="dz-search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="search" id="dz-search-input" placeholder="Найти заболевание…" autocomplete="off" />
+    </div>
+    <div class="dz-counter">
+      <span class="dz-counter-text">Выбрано: <b id="dz-count">0</b></span>
+      <button type="button" class="dz-clear" id="dz-clear-btn" hidden>Сбросить</button>
+    </div>
+  </div>
+
+  <div class="dz-groups" id="plan-diseases-grid">
+
+    <div class="dz-group">
+      <h4 class="dz-group-title"><span class="dz-group-icon">🫀</span>Сердце и давление</h4>
+      <div class="dz-chips">
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="Артериальная гипертензия" /><span class="dz-chip-body"><i class="dz-check"></i>Артериальная гипертензия</span></label>
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="Стабильная ишемическая болезнь сердца" /><span class="dz-chip-body"><i class="dz-check"></i>Стабильная ишемическая болезнь сердца</span></label>
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="Некоторые врождённые пороки сердца" /><span class="dz-chip-body"><i class="dz-check"></i>Некоторые врождённые пороки сердца</span></label>
+      </div>
+    </div>
+
+    <div class="dz-group">
+      <h4 class="dz-group-title"><span class="dz-group-icon">🩸</span>Обмен веществ и гормоны</h4>
+      <div class="dz-chips">
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="Сахарный диабет 1 типа" /><span class="dz-chip-body"><i class="dz-check"></i>Сахарный диабет 1 типа</span></label>
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="Сахарный диабет 2 типа" /><span class="dz-chip-body"><i class="dz-check"></i>Сахарный диабет 2 типа</span></label>
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="Гипотиреоз" /><span class="dz-chip-body"><i class="dz-check"></i>Гипотиреоз</span></label>
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="Ожирение" /><span class="dz-chip-body"><i class="dz-check"></i>Ожирение</span></label>
+      </div>
+    </div>
+
+    <div class="dz-group">
+      <h4 class="dz-group-title"><span class="dz-group-icon">🌬️</span>Дыхание</h4>
+      <div class="dz-chips">
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="Бронхиальная астма" /><span class="dz-chip-body"><i class="dz-check"></i>Бронхиальная астма</span></label>
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="ХОБЛ" /><span class="dz-chip-body"><i class="dz-check"></i>ХОБЛ</span></label>
+      </div>
+    </div>
+
+    <div class="dz-group">
+      <h4 class="dz-group-title"><span class="dz-group-icon">🦴</span>Суставы, кости и спина</h4>
+      <div class="dz-chips">
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="Сколиоз" /><span class="dz-chip-body"><i class="dz-check"></i>Сколиоз</span></label>
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="Артроз" /><span class="dz-chip-body"><i class="dz-check"></i>Артроз</span></label>
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="Хроническая боль в пояснице" /><span class="dz-chip-body"><i class="dz-check"></i>Хроническая боль в пояснице</span></label>
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="Ревматоидный артрит" /><span class="dz-chip-body"><i class="dz-check"></i>Ревматоидный артрит</span></label>
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="Остеопороз" /><span class="dz-chip-body"><i class="dz-check"></i>Остеопороз</span></label>
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="Хронические заболевания суставов" /><span class="dz-chip-body"><i class="dz-check"></i>Хронические заболевания суставов</span></label>
+      </div>
+    </div>
+
+    <div class="dz-group">
+      <h4 class="dz-group-title"><span class="dz-group-icon">🍽️</span>Пищеварение и почки</h4>
+      <div class="dz-chips">
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="Хронический гастрит" /><span class="dz-chip-body"><i class="dz-check"></i>Хронический гастрит</span></label>
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="ГЭРБ" /><span class="dz-chip-body"><i class="dz-check"></i>ГЭРБ</span></label>
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="Хроническая болезнь почек" /><span class="dz-chip-body"><i class="dz-check"></i>Хроническая болезнь почек</span></label>
+      </div>
+    </div>
+
+    <div class="dz-group">
+      <h4 class="dz-group-title"><span class="dz-group-icon">🧠</span>Прочее</h4>
+      <div class="dz-chips">
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="Эпилепсия" /><span class="dz-chip-body"><i class="dz-check"></i>Эпилепсия</span></label>
+        <label class="dz-chip"><input type="checkbox" class="plan-disease-cb" value="Анемия после лечения причины" /><span class="dz-chip-body"><i class="dz-check"></i>Анемия после лечения причины</span></label>
+      </div>
+    </div>
+
+    <p class="dz-nothing" id="dz-nothing" hidden>Ничего не найдено</p>
+  </div>
+</div>
 
           <label class="dropzone" id="plan-dropzone" for="plan-input">
             <input type="file" id="plan-input" accept="image/*" hidden />
