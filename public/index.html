@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>HealthyWay — ИИ-анализ еды и тела</title>
 <link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="trainer.css" />
 </head>
 <body>
 
@@ -459,6 +460,73 @@
       </div>
     </section>
 
+    <!-- ============ TRAINER TAB ============ -->
+    <section class="tab-panel wrap" id="tab-trainer" data-tab-panel="trainer" hidden>
+      <div class="feature-head">
+        <h2>Тренер по технике</h2>
+        <p>Включите камеру, встаньте боком и делайте упражнение. ИИ считает повторы, проверяет углы и подсказывает голосом. Видео обрабатывается прямо на вашем устройстве и никуда не отправляется.</p>
+      </div>
+
+      <div class="trainer-controls">
+        <label>Упражнение
+          <select id="trainer-exercise">
+            <option value="squat">Приседания</option>
+            <option value="pushup">Отжимания</option>
+          </select>
+        </label>
+        <label class="trainer-check">
+          <input type="checkbox" id="trainer-voice" checked />
+          Голосовые подсказки
+        </label>
+      </div>
+
+      <div class="trainer-stage" id="trainer-stage">
+        <video id="trainer-video" playsinline muted hidden></video>
+        <canvas id="trainer-canvas"></canvas>
+
+        <div class="trainer-hud" id="trainer-hud" hidden>
+          <div class="trainer-reps"><span id="trainer-reps">0</span><small>повторов</small></div>
+          <div class="trainer-angle"><span id="trainer-angle">--</span><small id="trainer-angle-label">угол</small></div>
+        </div>
+
+        <div class="trainer-cue" id="trainer-cue" hidden></div>
+
+        <div class="trainer-placeholder" id="trainer-placeholder">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          <p>Камера выключена. Нажмите «Включить камеру».</p>
+        </div>
+      </div>
+
+      <div class="trainer-buttons">
+        <button type="button" class="btn btn-primary" id="trainer-start-btn">Включить камеру</button>
+        <button type="button" class="btn btn-ghost" id="trainer-flip-btn" hidden>Сменить камеру</button>
+        <button type="button" class="btn btn-ghost" id="trainer-reset-btn" hidden>Сбросить счётчик</button>
+        <button type="button" class="btn btn-ghost" id="trainer-stop-btn" hidden>Закончить</button>
+      </div>
+      <p class="trainer-status" id="trainer-status"></p>
+
+      <div class="trainer-summary" id="trainer-summary" hidden>
+        <h3>Итог тренировки</h3>
+        <p class="trainer-summary-text" id="trainer-summary-text"></p>
+        <button type="button" class="btn btn-ghost btn-small" id="trainer-ai-btn">Получить совет от ИИ</button>
+        <p class="trainer-ai-text" id="trainer-ai-text" hidden></p>
+      </div>
+
+      <ul class="trainer-tips">
+        <li>Поставьте телефон или ноутбук так, чтобы вас было видно целиком, и встаньте к камере боком.</li>
+        <li>Нужен хороший свет и однотонный фон; одежда не должна скрывать суставы.</li>
+        <li>Камера работает только на https:// или на localhost.</li>
+      </ul>
+
+      <div class="trainer-history" id="trainer-history"></div>
+
+      <p class="disclaimer">
+        Это вспомогательный инструмент, а не замена тренеру или врачу. Оценка техники приблизительная.
+        При боли, головокружении или дискомфорте остановитесь; при хронических заболеваниях и травмах
+        сначала проконсультируйтесь с врачом.
+      </p>
+    </section>
+
     <!-- ============ PROFILE TAB ============ -->
     <section class="tab-panel wrap" id="tab-profile" data-tab-panel="profile" hidden>
       <div class="feature-head">
@@ -501,6 +569,10 @@
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
       <span>Тренер</span>
     </button>
+    <button class="bottom-nav-btn" data-tab="trainer" aria-label="Тренер по технике">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="5" r="2"/><path d="M12 7v6M12 13l-3 6M12 13l3 6M7 10l5-1 5 1"/></svg>
+      <span>Техника</span>
+    </button>
     <button class="bottom-nav-btn" data-tab="profile" aria-label="Профиль">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6M12 12a4 4 0 100-8 4 4 0 000 8z"/></svg>
       <span>Профиль</span>
@@ -510,5 +582,6 @@
   <script src="history.js"></script>
   <script src="chat.js"></script>
   <script src="app.js"></script>
+  <script src="trainer.js"></script>
 </body>
 </html>
