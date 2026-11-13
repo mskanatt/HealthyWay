@@ -467,6 +467,90 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
+// ---------- /api/trainer-feedback ----------
+// Принимает итоги тренировки (числа, без фото и видео) и возвращает короткий совет от Gemini.
+
+async function callGeminiForText(promptText) {
+  const body = {
+    contents: [{ role: "user", parts: [{ text: promptText }] }],
+    generationConfig: { temperature: 0.5 },
+  };
+
+  let response;
+  try {
+    response = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30000),
+    });
+  } catch (networkErr) {
+    if (networkErr.name === "TimeoutError") {
+      throw new Error("ИИ слишком долго отвечает. Попробуйте ещё раз.");
+    }
+    throw new Error("Не удалось связаться с сервисом ИИ. Проверьте подключение и попробуйте снова.");
+  }
+
+  if (!response.ok) {
+    const errBody = await response.text().catch(() => "");
+    console.error("Gemini trainer API error:", response.status, errBody);
+    if (response.status === 429) {
+      throw new Error("Слишком много запросов. Подождите немного и попробуйте снова.");
+    }
+    throw new Error("Проблема на стороне сервиса ИИ. Попробуйте ещё раз чуть позже.");
+  }
+
+  const data = await response.json();
+  const parts = data?.candidates?.[0]?.content?.parts;
+  const text = Array.isArray(parts) ? parts.map((p) => p.text || "").join("").trim() : "";
+  if (!text) throw new Error("ИИ не вернул подходящий ответ. Попробуйте ещё раз.");
+  return text;
+}
+
+function clampNum(v, min, max) {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : 0;
+}
+
+app.post("/api/trainer-feedback", async (req, res) => {
+  try {
+    const b = req.body || {};
+    const exercise =
+      b.exercise === "squat" ? "squats" : b.exercise === "pushup" ? "push-ups" : null;
+    if (!exercise) return badRequest(res, "Неизвестное упражнение.");
+
+    const reps = clampNum(b.reps, 0, 500);
+    const partial = clampNum(b.partial, 0, 500);
+    const cleanReps = clampNum(b.cleanReps, 0, 500);
+    const formIssues = clampNum(b.formIssues, 0, 500);
+    const avgMinAngle = clampNum(b.avgMinAngle, 0, 180);
+    const durationSec = clampNum(b.durationSec, 0, 7200);
+    if (reps + partial === 0) return badRequest(res, "Нет данных о повторах.");
+
+    const prompt = `
+You are a cautious, encouraging fitness-coach assistant. A person just finished a set of ${exercise},
+tracked by camera pose estimation (the numbers are approximate).
+
+- Counted full reps: ${reps}
+- Partial reps (not deep enough, not counted): ${partial}
+- Full reps without form warnings: ${cleanReps}
+- Reps with form warnings (torso leaning too far forward for squats / sagging or piked body line for push-ups): ${formIssues}
+- Average joint angle at the bottom of a rep: ${avgMinAngle} degrees (knee angle for squats, elbow angle for push-ups; smaller means deeper)
+- Duration: ${durationSec} seconds
+
+Write short feedback in Russian, at most 4 sentences: what went well, one or two things to improve,
+and one simple tip or drill. No medical advice or diagnoses; if anything hurts, suggest stopping and
+asking a professional. Do not use markdown, lists, or emojis.
+`.trim();
+
+    const feedback = await callGeminiForText(prompt);
+    res.json({ feedback });
+  } catch (err) {
+    console.error("trainer-feedback error:", err.message);
+    res.status(502).json({ error: err.message || "Не удалось получить совет." });
+  }
+});
+
 // ---------- start server ----------
 
 const PORT = process.env.PORT || 3000;
