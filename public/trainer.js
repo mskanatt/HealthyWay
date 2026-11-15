@@ -210,9 +210,26 @@
     cueTimer = setTimeout(() => { cueEl.hidden = true; }, 1600);
   }
 
+  let voicesCache = [];
+  let currentUtterance = null; // держим ссылку: иначе Chrome может «потерять» фразу и промолчать
+
+  function loadVoices() {
+    if (!("speechSynthesis" in window)) return;
+    voicesCache = speechSynthesis.getVoices() || [];
+  }
+  if ("speechSynthesis" in window) {
+    loadVoices();
+    // В Chrome список голосов подгружается с задержкой
+    speechSynthesis.addEventListener("voiceschanged", loadVoices);
+  }
+
   function pickVoice() {
-    if (!("speechSynthesis" in window)) return null;
-    return speechSynthesis.getVoices().find((v) => /^ru/i.test(v.lang)) || null;
+    if (!voicesCache.length) loadVoices();
+    return (
+      voicesCache.find((v) => /^ru/i.test(v.lang)) ||
+      voicesCache.find((v) => /russian|рус/i.test(v.name)) ||
+      null
+    );
   }
 
   function speak(text, opts) {
@@ -220,24 +237,46 @@
     if (!voiceCb.checked || !("speechSynthesis" in window)) return;
     const now = Date.now();
     if (spokenAt[text] && now - spokenAt[text] < minGap) return;
-    if (!priority && (speechSynthesis.speaking || now - lastSpeechAt < 1000)) return;
-    if (priority) speechSynthesis.cancel(); // замечание важнее номера повтора
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "ru-RU";
-    u.rate = 1.05;
-    const v = pickVoice();
-    if (v) u.voice = v;
-    speechSynthesis.speak(u);
+    if (!priority && (speechSynthesis.speaking || now - lastSpeechAt < 800)) return;
+
     lastSpeechAt = now;
     spokenAt[text] = now;
+
+    const say = () => {
+      try {
+        speechSynthesis.resume(); // Chrome иногда «зависает» в паузе
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = "ru-RU";
+        u.rate = 1.05;
+        u.volume = 1;
+        const v = pickVoice();
+        if (v) u.voice = v;
+        u.onerror = (ev) => console.warn("speech error:", ev.error);
+        currentUtterance = u;
+        speechSynthesis.speak(u);
+      } catch (err) {
+        console.warn("speech failed:", err);
+      }
+    };
+
+    if (priority && (speechSynthesis.speaking || speechSynthesis.pending)) {
+      speechSynthesis.cancel(); // замечание важнее номера повтора
+      // Chrome теряет фразу, если speak() вызвать сразу после cancel(), поэтому небольшая пауза
+      setTimeout(say, 120);
+    } else {
+      say();
+    }
   }
 
   function warmUpSpeech() {
-    // Браузеры разрешают голос только после действия пользователя — «прогреваем» по клику на «Старт».
-    if ("speechSynthesis" in window) {
-      speechSynthesis.getVoices();
-      speechSynthesis.speak(new SpeechSynthesisUtterance(""));
+    // Браузеры разрешают голос только после действия пользователя (клик на «Включить камеру»).
+    // Здороваемся сразу: так слышно, что голос работает.
+    if (!("speechSynthesis" in window)) {
+      setStatus("Этот браузер не поддерживает голосовые подсказки.", "warn");
+      return;
     }
+    loadVoices();
+    speak("Начинаем. Встаньте боком к камере.", { priority: true, minGap: 0 });
   }
 
   function handleEvent(e) {
